@@ -6,10 +6,13 @@
 (define-constant ERR-INVALID-QR-CODE (err u5))
 (define-constant ERR-BATCH-ALREADY-EXISTS (err u6))
 (define-constant ERR-INVALID-STAGE (err u7))
+(define-constant ERR-NOT-OWNER (err u8))
+(define-constant ERR-TRANSFER-TO-SELF (err u9))
 
 (define-data-var next-farmer-id uint u1)
 (define-data-var next-batch-id uint u1)
 (define-data-var incentive-pool uint u0)
+(define-data-var next-transfer-id uint u1)
 
 (define-map farmers
   { farmer-id: uint }
@@ -62,6 +65,17 @@
 (define-map qr-code-to-batch
   { qr-code: (string-ascii 32) }
   { batch-id: uint }
+)
+
+(define-map ownership-transfers
+  { transfer-id: uint }
+  {
+    batch-id: uint,
+    from-owner: principal,
+    to-owner: principal,
+    transfer-timestamp: uint,
+    transfer-reason: (string-ascii 100)
+  }
 )
 
 (define-public (register-farmer (name (string-ascii 50)) (location (string-ascii 100)) (certified-sustainable bool))
@@ -172,8 +186,10 @@
       (
         (batch-info (unwrap-panic batch-data))
         (current-stage (get current-stage batch-info))
+        (current-owner (get current-owner batch-info))
         (timestamp stacks-block-height)
       )
+      (asserts! (is-eq tx-sender current-owner) ERR-NOT-OWNER)
       (asserts! (not (is-eq current-stage new-stage)) ERR-INVALID-STAGE)
       (map-set rice-batches
         { batch-id: batch-id }
@@ -275,6 +291,40 @@
   )
 )
 
+(define-public (transfer-batch-ownership (batch-id uint) (new-owner principal) (transfer-reason (string-ascii 100)))
+  (let 
+    (
+      (batch-data (map-get? rice-batches { batch-id: batch-id }))
+      (transfer-id (var-get next-transfer-id))
+    )
+    (asserts! (is-some batch-data) ERR-BATCH-NOT-FOUND)
+    (let 
+      (
+        (batch-info (unwrap-panic batch-data))
+        (current-owner (get current-owner batch-info))
+      )
+      (asserts! (is-eq tx-sender current-owner) ERR-NOT-OWNER)
+      (asserts! (not (is-eq tx-sender new-owner)) ERR-TRANSFER-TO-SELF)
+      (map-set rice-batches
+        { batch-id: batch-id }
+        (merge batch-info { current-owner: new-owner })
+      )
+      (map-set ownership-transfers
+        { transfer-id: transfer-id }
+        {
+          batch-id: batch-id,
+          from-owner: current-owner,
+          to-owner: new-owner,
+          transfer-timestamp: stacks-block-height,
+          transfer-reason: transfer-reason
+        }
+      )
+      (var-set next-transfer-id (+ transfer-id u1))
+      (ok transfer-id)
+    )
+  )
+)
+
 (define-read-only (get-farmer (farmer-id uint))
   (map-get? farmers { farmer-id: farmer-id })
 )
@@ -304,4 +354,15 @@
 
 (define-read-only (get-incentive-pool)
   (var-get incentive-pool)
+)
+
+(define-read-only (get-ownership-transfer (transfer-id uint))
+  (map-get? ownership-transfers { transfer-id: transfer-id })
+)
+
+(define-read-only (get-batch-owner (batch-id uint))
+  (match (map-get? rice-batches { batch-id: batch-id })
+    batch-data (some (get current-owner batch-data))
+    none
+  )
 )
