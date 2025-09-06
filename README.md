@@ -1,2 +1,166 @@
-#  Rice Supply Chain Transparency System
+A blockchain-based solution for tracking rice from farm to market, ensuring transparency and authenticity in the rice supply chain.
 
+## 🎯 Overview
+
+This smart contract enables farmers, processors, distributors, and consumers to track rice through every stage of the supply chain. Each batch of rice gets a unique QR code that consumers can scan to verify origin, quality, and sustainability.
+
+## ✨ Key Features
+
+- 👨‍🌾 **Farmer Registration**: Digital IDs for verified farmers
+- 📦 **Batch Tracking**: Complete journey from harvest to market
+- 🔍 **QR Code Verification**: Instant authenticity checks for consumers
+- 🌱 **Sustainability Incentives**: Rewards for sustainable farming practices
+- 📊 **Quality Scoring**: Transparent quality metrics
+- 🏆 **Certification System**: Verified sustainable farming badges
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- [Clarinet](https://docs.hiro.so/stacks/clarinet) installed
+- [Node.js](https://nodejs.org/) for testing
+
+### Installation
+
+```bash
+git clone <repository-url>
+cd Rice-Supply-Chain-Transparency-System
+clarinet check
+npm install
+npm test
+```
+
+## 📋 Usage Instructions
+
+### 1. Register as a Farmer 👨‍🌾
+
+```clarity
+(contract-call? .rice-supply-chain register-farmer 
+  "John Smith Farm" 
+  "Bohol, Philippines" 
+  true)  ;; certified sustainable
+```
+
+### 2. Create Rice Batch 📦
+
+```clarity
+(contract-call? .rice-supply-chain create-rice-batch
+  "QR123456789012345678901234567890"  ;; unique QR code
+  "Jasmine Rice"                       ;; variety
+  u1000                               ;; quantity in kg
+  u1640995200                         ;; harvest date timestamp
+  u95)                                ;; quality score (0-100)
+```
+
+### 3. Update Batch Stage 🚚
+
+```clarity
+(contract-call? .rice-supply-chain update-batch-stage
+  u1                                  ;; batch ID
+  "processed"                         ;; new stage
+  "Rice Mill, Cebu"                   ;; location
+  (some u25)                          ;; temperature °C
+  (some u60)                          ;; humidity %
+  "Rice milled and packaged")         ;; notes
+```
+
+### 4. Verify QR Code 🔍
+
+```clarity
+(contract-call? .rice-supply-chain verify-qr-code
+  "QR123456789012345678901234567890")
+```
+
+### 5. Award Sustainability Incentives 🌱
+
+```clarity
+(contract-call? .rice-supply-chain award-sustainability-incentive
+  u1    ;; farmer ID
+  u50)  ;; incentive points
+```
+
+## 📊 Data Structures
+
+### Farmer Profile
+- 🆔 Unique farmer ID
+- 👤 Principal address
+- 📍 Farm location
+- ✅ Sustainability certification
+- 📈 Total batches produced
+- 🏆 Sustainability score
+
+### Rice Batch
+- 🔢 Unique batch ID
+- 🏷️ QR code identifier
+- 🌾 Rice variety
+- ⚖️ Quantity in kilograms
+- 📅 Harvest/processing/transport dates
+- 📍 Current stage and owner
+- ⭐ Quality and sustainability scores
+
+### Supply Chain Stages
+- 🌾 **Harvested**: Fresh from farm
+- 🏭 **Processed**: Milled and packaged
+- 🚛 **In-Transit**: Moving to market
+- 🏪 **At-Market**: Available to consumers
+
+## 🔧 Available Functions
+
+### Public Functions
+- `register-farmer` - Register new farmer
+- `create-rice-batch` - Create new rice batch
+- `update-batch-stage` - Update supply chain stage
+- `verify-qr-code` - Verify batch authenticity
+- `award-sustainability-incentive` - Award farmer incentives
+- `certify-sustainable-farming` - Grant sustainability certification
+
+### Read-Only Functions
+- `get-farmer` - Get farmer details by ID
+- `get-farmer-by-principal` - Get farmer by wallet address
+- `get-batch` - Get batch details
+- `get-batch-tracking` - Get stage tracking info
+- `get-total-farmers` - Total registered farmers
+- `get-total-batches` - Total rice batches
+- `get-incentive-pool` - Total incentives awarded
+
+## 🧪 Testing
+
+Run the test suite:
+
+```bash
+npm test
+```
+
+## 🛡️ Security Features
+
+- ✅ Validated input parameters
+- 🔒 Access control for admin functions
+- 🚫 Duplicate prevention (farmers, QR codes)
+- 💪 Error handling with descriptive codes
+- 🔍 Immutable supply chain records
+
+## 📝 Error Codes
+
+- `u1` - Not authorized
+- `u2` - Farmer not found
+- `u3` - Batch not found
+- `u4` - Already registered
+- `u5` - Invalid QR code
+- `u6` - Batch already exists
+- `u7` - Invalid stage transition
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch
+3. Add tests for new functionality
+4. Ensure all tests pass
+5. Submit pull request
+
+## 📄 License
+
+MIT License - see LICENSE file for details.
+
+---
+
+Built with ❤️ for transparent and sustainable rice supply chains 🌾
