@@ -12,6 +12,7 @@ This smart contract enables farmers, processors, distributors, and consumers to 
 - 🌱 **Sustainability Incentives**: Rewards for sustainable farming practices
 - 📊 **Quality Scoring**: Transparent quality metrics
 - 🏆 **Certification System**: Verified sustainable farming badges
+- 🚨 **Quality Issue Reporting**: Track and resolve quality concerns in real-time
 
 ## 🚀 Getting Started
 
@@ -79,6 +80,24 @@ npm test
   u50)  ;; incentive points
 ```
 
+### 6. Report Quality Issue 🚨
+
+```clarity
+(contract-call? .rice-supply-chain report-quality-issue
+  u1                                  ;; batch ID
+  "contamination"                     ;; issue type
+  "Foreign particles detected"        ;; description
+  u8)                                 ;; severity (1-10)
+```
+
+### 7. Resolve Quality Issue ✅
+
+```clarity
+(contract-call? .rice-supply-chain resolve-quality-issue
+  u1                                  ;; issue ID
+  "Issue resolved after inspection")  ;; resolution notes
+```
+
 ## 📊 Data Structures
 
 ### Farmer Profile
@@ -113,6 +132,8 @@ npm test
 - `verify-qr-code` - Verify batch authenticity
 - `award-sustainability-incentive` - Award farmer incentives
 - `certify-sustainable-farming` - Grant sustainability certification
+- `report-quality-issue` - Report quality concerns for batches
+- `resolve-quality-issue` - Resolve reported quality issues
 
 ### Read-Only Functions
 - `get-farmer` - Get farmer details by ID
@@ -122,6 +143,8 @@ npm test
 - `get-total-farmers` - Total registered farmers
 - `get-total-batches` - Total rice batches
 - `get-incentive-pool` - Total incentives awarded
+- `get-quality-issue` - Get details of a specific quality issue
+- `get-batch-issues` - Get all issues for a batch
 
 ## 🧪 Testing
 
@@ -148,6 +171,7 @@ npm test
 - `u5` - Invalid QR code
 - `u6` - Batch already exists
 - `u7` - Invalid stage transition
+- `u10` - Issue not found
 
 ## 🤝 Contributing
 

@@ -8,11 +8,13 @@
 (define-constant ERR-INVALID-STAGE (err u7))
 (define-constant ERR-NOT-OWNER (err u8))
 (define-constant ERR-TRANSFER-TO-SELF (err u9))
+(define-constant ERR-ISSUE-NOT-FOUND (err u10))
 
 (define-data-var next-farmer-id uint u1)
 (define-data-var next-batch-id uint u1)
 (define-data-var incentive-pool uint u0)
 (define-data-var next-transfer-id uint u1)
+(define-data-var next-issue-id uint u1)
 
 (define-map farmers
   { farmer-id: uint }
@@ -75,6 +77,20 @@
     to-owner: principal,
     transfer-timestamp: uint,
     transfer-reason: (string-ascii 100)
+  }
+)
+
+(define-map quality-issues
+  { issue-id: uint }
+  {
+    batch-id: uint,
+    reporter: principal,
+    issue-type: (string-ascii 50),
+    description: (string-ascii 200),
+    severity: uint,
+    reported-at: uint,
+    resolved: bool,
+    resolution-notes: (optional (string-ascii 200))
   }
 )
 
@@ -364,5 +380,66 @@
   (match (map-get? rice-batches { batch-id: batch-id })
     batch-data (some (get current-owner batch-data))
     none
+  )
+)
+
+(define-public (report-quality-issue (batch-id uint) (issue-type (string-ascii 50)) (description (string-ascii 200)) (severity uint))
+  (let
+    (
+      (batch-data (map-get? rice-batches { batch-id: batch-id }))
+      (issue-id (var-get next-issue-id))
+    )
+    (asserts! (is-some batch-data) ERR-BATCH-NOT-FOUND)
+    (asserts! (> severity u0) ERR-INVALID-STAGE)
+    (asserts! (<= severity u10) ERR-INVALID-STAGE)
+    (map-set quality-issues
+      { issue-id: issue-id }
+      {
+        batch-id: batch-id,
+        reporter: tx-sender,
+        issue-type: issue-type,
+        description: description,
+        severity: severity,
+        reported-at: stacks-block-height,
+        resolved: false,
+        resolution-notes: none
+      }
+    )
+    (var-set next-issue-id (+ issue-id u1))
+    (ok issue-id)
+  )
+)
+
+(define-public (resolve-quality-issue (issue-id uint) (resolution-notes (string-ascii 200)))
+  (let
+    (
+      (issue-data (map-get? quality-issues { issue-id: issue-id }))
+    )
+    (asserts! (is-some issue-data) ERR-ISSUE-NOT-FOUND)
+    (let
+      (
+        (issue-info (unwrap-panic issue-data))
+        (batch-data (unwrap-panic (map-get? rice-batches { batch-id: (get batch-id issue-info) })))
+      )
+      (asserts! (is-eq tx-sender (get current-owner batch-data)) ERR-NOT-OWNER)
+      (map-set quality-issues
+        { issue-id: issue-id }
+        (merge issue-info { resolved: true, resolution-notes: (some resolution-notes) })
+      )
+      (ok true)
+    )
+  )
+)
+
+(define-read-only (get-quality-issue (issue-id uint))
+  (map-get? quality-issues { issue-id: issue-id })
+)
+
+(define-read-only (get-batch-issues (batch-id uint))
+  (let
+    (
+      (issues (list))
+    )
+    (ok issues)
   )
 )
