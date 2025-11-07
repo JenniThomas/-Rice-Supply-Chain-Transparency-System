@@ -13,6 +13,7 @@ This smart contract enables farmers, processors, distributors, and consumers to 
 - 📊 **Quality Scoring**: Transparent quality metrics
 - 🏆 **Certification System**: Verified sustainable farming badges
 - 🚨 **Quality Issue Reporting**: Track and resolve quality concerns in real-time
+- 🏅 **Third-Party Certification**: Independent certifiers validate batch quality and standards
 
 ## 🚀 Getting Started
 
@@ -98,6 +99,26 @@ npm test
   "Issue resolved after inspection")  ;; resolution notes
 ```
 
+### 8. Register as a Certifier 🏅
+
+```clarity
+(contract-call? .rice-supply-chain register-certifier
+  "Global Food Standards Inc."        ;; certifier name
+  "International Certification Body"  ;; organization
+  "Organic & Sustainable")            ;; certification type
+```
+
+### 9. Certify Rice Batch 🏅
+
+```clarity
+(contract-call? .rice-supply-chain certify-batch
+  u1                                  ;; batch ID
+  "Organic Certified"                 ;; certification type
+  u1672531200                         ;; expiry date timestamp
+  u95                                 ;; certification score (0-100)
+  "Certified organic by independent auditor")  ;; notes
+```
+
 ## 📊 Data Structures
 
 ### Farmer Profile
@@ -117,6 +138,22 @@ npm test
 - 📍 Current stage and owner
 - ⭐ Quality and sustainability scores
 
+### Certifier Profile
+- 🆔 Unique certifier ID
+- 👤 Principal address
+- 🏢 Organization name
+- 🏅 Certification type (e.g., Organic, Fair Trade)
+- 📈 Total certifications issued
+- 📅 Registration block
+
+### Batch Certification
+- 🔢 Batch ID
+- 🆔 Certifier ID
+- 🏅 Certification type
+- 📅 Certification and expiry dates
+- ⭐ Certification score
+- 📝 Certification notes
+
 ### Supply Chain Stages
 - 🌾 **Harvested**: Fresh from farm
 - 🏭 **Processed**: Milled and packaged
@@ -134,6 +171,8 @@ npm test
 - `certify-sustainable-farming` - Grant sustainability certification
 - `report-quality-issue` - Report quality concerns for batches
 - `resolve-quality-issue` - Resolve reported quality issues
+- `register-certifier` - Register independent certification authority
+- `certify-batch` - Issue third-party certification for rice batches
 
 ### Read-Only Functions
 - `get-farmer` - Get farmer details by ID
@@ -145,6 +184,10 @@ npm test
 - `get-incentive-pool` - Total incentives awarded
 - `get-quality-issue` - Get details of a specific quality issue
 - `get-batch-issues` - Get all issues for a batch
+- `get-certifier` - Get certifier details by ID
+- `get-certifier-by-principal` - Get certifier by wallet address
+- `get-batch-certification` - Get certification details for a batch
+- `get-total-certifiers` - Total registered certifiers
 
 ## 🧪 Testing
 
@@ -172,6 +215,8 @@ npm test
 - `u6` - Batch already exists
 - `u7` - Invalid stage transition
 - `u10` - Issue not found
+- `u11` - Certifier not found
+- `u12` - Batch already certified
 
 ## 🤝 Contributing
 

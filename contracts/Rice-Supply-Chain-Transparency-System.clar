@@ -9,12 +9,15 @@
 (define-constant ERR-NOT-OWNER (err u8))
 (define-constant ERR-TRANSFER-TO-SELF (err u9))
 (define-constant ERR-ISSUE-NOT-FOUND (err u10))
+(define-constant ERR-CERTIFIER-NOT-FOUND (err u11))
+(define-constant ERR-BATCH-ALREADY-CERTIFIED (err u12))
 
 (define-data-var next-farmer-id uint u1)
 (define-data-var next-batch-id uint u1)
 (define-data-var incentive-pool uint u0)
 (define-data-var next-transfer-id uint u1)
 (define-data-var next-issue-id uint u1)
+(define-data-var next-certifier-id uint u1)
 
 (define-map farmers
   { farmer-id: uint }
@@ -91,6 +94,35 @@
     reported-at: uint,
     resolved: bool,
     resolution-notes: (optional (string-ascii 200))
+  }
+)
+
+(define-map certifiers
+  { certifier-id: uint }
+  {
+    principal: principal,
+    name: (string-ascii 50),
+    organization: (string-ascii 100),
+    certification-type: (string-ascii 50),
+    registration-block: uint,
+    total-certifications: uint
+  }
+)
+
+(define-map certifier-principals
+  { principal: principal }
+  { certifier-id: uint }
+)
+
+(define-map batch-certifications
+  { batch-id: uint }
+  {
+    certifier-id: uint,
+    certification-type: (string-ascii 50),
+    certification-date: uint,
+    expiry-date: uint,
+    certification-score: uint,
+    notes: (string-ascii 200)
   }
 )
 
@@ -442,4 +474,85 @@
     )
     (ok issues)
   )
+)
+
+(define-public (register-certifier (name (string-ascii 50)) (organization (string-ascii 100)) (certification-type (string-ascii 50)))
+  (let
+    (
+      (certifier-id (var-get next-certifier-id))
+      (existing-certifier (map-get? certifier-principals { principal: tx-sender }))
+    )
+    (asserts! (is-none existing-certifier) ERR-ALREADY-REGISTERED)
+    (map-set certifiers
+      { certifier-id: certifier-id }
+      {
+        principal: tx-sender,
+        name: name,
+        organization: organization,
+        certification-type: certification-type,
+        registration-block: stacks-block-height,
+        total-certifications: u0
+      }
+    )
+    (map-set certifier-principals
+      { principal: tx-sender }
+      { certifier-id: certifier-id }
+    )
+    (var-set next-certifier-id (+ certifier-id u1))
+    (ok certifier-id)
+  )
+)
+
+(define-public (certify-batch (batch-id uint) (certification-type (string-ascii 50)) (expiry-date uint) (certification-score uint) (notes (string-ascii 200)))
+  (let
+    (
+      (certifier-data (map-get? certifier-principals { principal: tx-sender }))
+      (batch-data (map-get? rice-batches { batch-id: batch-id }))
+      (existing-certification (map-get? batch-certifications { batch-id: batch-id }))
+    )
+    (asserts! (is-some certifier-data) ERR-CERTIFIER-NOT-FOUND)
+    (asserts! (is-some batch-data) ERR-BATCH-NOT-FOUND)
+    (asserts! (is-none existing-certification) ERR-BATCH-ALREADY-CERTIFIED)
+    (let
+      (
+        (certifier-id (get certifier-id (unwrap-panic certifier-data)))
+        (certifier-info (unwrap-panic (map-get? certifiers { certifier-id: certifier-id })))
+      )
+      (map-set batch-certifications
+        { batch-id: batch-id }
+        {
+          certifier-id: certifier-id,
+          certification-type: certification-type,
+          certification-date: stacks-block-height,
+          expiry-date: expiry-date,
+          certification-score: certification-score,
+          notes: notes
+        }
+      )
+      (map-set certifiers
+        { certifier-id: certifier-id }
+        (merge certifier-info { total-certifications: (+ (get total-certifications certifier-info) u1) })
+      )
+      (ok true)
+    )
+  )
+)
+
+(define-read-only (get-certifier (certifier-id uint))
+  (map-get? certifiers { certifier-id: certifier-id })
+)
+
+(define-read-only (get-certifier-by-principal (principal principal))
+  (match (map-get? certifier-principals { principal: principal })
+    certifier-mapping (map-get? certifiers { certifier-id: (get certifier-id certifier-mapping) })
+    none
+  )
+)
+
+(define-read-only (get-batch-certification (batch-id uint))
+  (map-get? batch-certifications { batch-id: batch-id })
+)
+
+(define-read-only (get-total-certifiers)
+  (- (var-get next-certifier-id) u1)
 )
