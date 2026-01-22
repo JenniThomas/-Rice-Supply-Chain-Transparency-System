@@ -14,6 +14,7 @@ This smart contract enables farmers, processors, distributors, and consumers to 
 - 🏆 **Certification System**: Verified sustainable farming badges
 - 🚨 **Quality Issue Reporting**: Track and resolve quality concerns in real-time
 - 🏅 **Third-Party Certification**: Independent certifiers validate batch quality and standards
+- ⏰ **Expiration Tracking**: Monitor batch expiration dates for food safety compliance
 
 ## 🚀 Getting Started
 
@@ -112,11 +113,20 @@ npm test
 
 ```clarity
 (contract-call? .rice-supply-chain certify-batch
-  u1                                  ;; batch ID
-  "Organic Certified"                 ;; certification type
-  u1672531200                         ;; expiry date timestamp
-  u95                                 ;; certification score (0-100)
-  "Certified organic by independent auditor")  ;; notes
+   u1                                  ;; batch ID
+   "Organic Certified"                 ;; certification type
+   u1672531200                         ;; expiry date timestamp
+   u95                                 ;; certification score (0-100)
+   "Certified organic by independent auditor")  ;; notes
+```
+
+### 10. Set Batch Expiration Date ⏰
+
+```clarity
+(contract-call? .rice-supply-chain set-batch-expiration-date
+   u1                                  ;; batch ID
+   u1672531200                         ;; expiration date timestamp
+)
 ```
 
 ## 📊 Data Structures
@@ -135,6 +145,7 @@ npm test
 - 🌾 Rice variety
 - ⚖️ Quantity in kilograms
 - 📅 Harvest/processing/transport dates
+- ⏰ Expiration date
 - 📍 Current stage and owner
 - ⭐ Quality and sustainability scores
 
@@ -173,6 +184,7 @@ npm test
 - `resolve-quality-issue` - Resolve reported quality issues
 - `register-certifier` - Register independent certification authority
 - `certify-batch` - Issue third-party certification for rice batches
+- `set-batch-expiration-date` - Set expiration date for a batch
 
 ### Read-Only Functions
 - `get-farmer` - Get farmer details by ID
@@ -188,6 +200,7 @@ npm test
 - `get-certifier-by-principal` - Get certifier by wallet address
 - `get-batch-certification` - Get certification details for a batch
 - `get-total-certifiers` - Total registered certifiers
+- `is-batch-expired` - Check if a batch has expired
 
 ## 🧪 Testing
 

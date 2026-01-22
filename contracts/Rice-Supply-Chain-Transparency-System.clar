@@ -11,6 +11,7 @@
 (define-constant ERR-ISSUE-NOT-FOUND (err u10))
 (define-constant ERR-CERTIFIER-NOT-FOUND (err u11))
 (define-constant ERR-BATCH-ALREADY-CERTIFIED (err u12))
+(define-constant ERR-BATCH-ALREADY-RECALLED (err u13))
 
 (define-data-var next-farmer-id uint u1)
 (define-data-var next-batch-id uint u1)
@@ -48,6 +49,7 @@
     processing-date: (optional uint),
     transport-date: (optional uint),
     market-date: (optional uint),
+    expiration-date: (optional uint),
     current-stage: (string-ascii 20),
     quality-score: uint,
     sustainable-certified: bool,
@@ -126,6 +128,16 @@
   }
 )
 
+(define-map batch-recalls
+  { batch-id: uint }
+  {
+    recalled: bool,
+    recall-reason: (string-ascii 200),
+    recall-timestamp: uint,
+    recalled-by: principal
+  }
+)
+
 (define-public (register-farmer (name (string-ascii 50)) (location (string-ascii 100)) (certified-sustainable bool))
   (let 
     (
@@ -186,6 +198,7 @@
           processing-date: none,
           transport-date: none,
           market-date: none,
+          expiration-date: none,
           current-stage: "harvested",
           quality-score: quality-score,
           sustainable-certified: is-sustainable,
@@ -346,13 +359,14 @@
       (transfer-id (var-get next-transfer-id))
     )
     (asserts! (is-some batch-data) ERR-BATCH-NOT-FOUND)
-    (let 
+    (let
       (
         (batch-info (unwrap-panic batch-data))
         (current-owner (get current-owner batch-info))
       )
       (asserts! (is-eq tx-sender current-owner) ERR-NOT-OWNER)
       (asserts! (not (is-eq tx-sender new-owner)) ERR-TRANSFER-TO-SELF)
+      (asserts! (is-none (map-get? batch-recalls { batch-id: batch-id })) ERR-BATCH-ALREADY-RECALLED)
       (map-set rice-batches
         { batch-id: batch-id }
         (merge batch-info { current-owner: new-owner })
@@ -538,6 +552,28 @@
   )
 )
 
+(define-public (initiate-batch-recall (batch-id uint) (recall-reason (string-ascii 200)))
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
+    (let ((batch-data (map-get? rice-batches { batch-id: batch-id })))
+      (asserts! (is-some batch-data) ERR-BATCH-NOT-FOUND)
+      (let ((existing-recall (map-get? batch-recalls { batch-id: batch-id })))
+        (asserts! (is-none existing-recall) ERR-BATCH-ALREADY-RECALLED)
+        (map-set batch-recalls
+          { batch-id: batch-id }
+          {
+            recalled: true,
+            recall-reason: recall-reason,
+            recall-timestamp: stacks-block-height,
+            recalled-by: tx-sender
+          }
+        )
+        (ok true)
+      )
+    )
+  )
+)
+
 (define-read-only (get-certifier (certifier-id uint))
   (map-get? certifiers { certifier-id: certifier-id })
 )
@@ -554,5 +590,43 @@
 )
 
 (define-read-only (get-total-certifiers)
+
   (- (var-get next-certifier-id) u1)
+
+)
+
+(define-public (set-batch-expiration-date (batch-id uint) (expiration-date uint))
+  (let
+    (
+      (batch-data (map-get? rice-batches { batch-id: batch-id }))
+    )
+    (asserts! (is-some batch-data) ERR-BATCH-NOT-FOUND)
+    (let
+      (
+        (batch-info (unwrap-panic batch-data))
+      )
+      (asserts! (is-eq tx-sender (get current-owner batch-info)) ERR-NOT-OWNER)
+      (map-set rice-batches
+        { batch-id: batch-id }
+        (merge batch-info { expiration-date: (some expiration-date) })
+      )
+      (ok true)
+    )
+  )
+)
+
+(define-read-only (is-batch-expired (batch-id uint))
+  (match (map-get? rice-batches { batch-id: batch-id })
+    batch-data (match (get expiration-date batch-data)
+      expiration-date (> stacks-block-height expiration-date)
+      false
+    )
+    false
+  )
+)
+
+(define-read-only (get-batch-recall (batch-id uint))
+
+  (map-get? batch-recalls { batch-id: batch-id })
+
 )
